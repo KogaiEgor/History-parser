@@ -2,6 +2,7 @@ import os.path
 import requests
 import json
 import logging
+import time
 
 
 class DataParser:
@@ -61,7 +62,8 @@ class DataParser:
             return response.json()
         else:
             self.logger.error("Failed to fetch leagues data. Status code: %s", response.status_code)
-            return None
+            time.sleep(5)
+            return self.__get_leagues()
 
 
     def __find_league_id(self):
@@ -89,7 +91,8 @@ class DataParser:
             return response.json()
         else:
             self.logger.error("Failed to fetch league table data. Status code: %s", response.status_code)
-            return None
+            time.sleep(5)
+            return self.__get_league_table()
 
     def __find_teams_ids(self):
         data = self.__get_league_table()
@@ -123,7 +126,8 @@ class DataParser:
             return response.json()
         else:
             self.logger.error("Failed to fetch matches data. Status code: %s", response.status_code)
-            return None
+            time.sleep(5)
+            return self.__get_team_matches(team_id, page)
 
     def __get_odds_for_match(self, event_id):
         params = {
@@ -139,7 +143,8 @@ class DataParser:
             return response.json()
         else:
             self.logger.error("Failed to fetch odds data. Status code: %s", response.status_code)
-            return None
+            time.sleep(5)
+            return self.__get_odds_for_match(event_id)
 
     def __write_odds_for_match(self, team_name, team_id):
         output_filename = f"{self.directory}//event_odds_{team_name}_{team_id}.json"
@@ -154,10 +159,12 @@ class DataParser:
                     break
                 for i, match in enumerate(matches):
                     match_data = self.__extract_match_data(match)
+                    time.sleep(1)
                     if match_data:
                         self.__write_match_data(file, match_data, page == 1 and i == 0)
                         self.logger.debug("New match added")
                 page += 1
+                time.sleep(2)
             file.write("]")
         self.logger.debug("File closed")
 
@@ -193,6 +200,7 @@ class DataParser:
         for team_name, team_id in self.teams.items():
             self.logger.debug("Get matches and odds for %s", team_name)
             self.__write_odds_for_match(team_name, team_id)
+            time.sleep(2)
 
 
     def parse(self):
