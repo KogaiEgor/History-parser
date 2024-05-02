@@ -13,7 +13,37 @@ class DataParser:
         self.league_name = league_name
         self.cc = cc
         self.__init_directory()
+        self.__find_league_id()
         self.logger = logging.getLogger(__name__)
+        self.logger = self.__setup_logger()
+
+
+    def __init_directory(self):
+        directory = f"data_{self.league_name}"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            self.logger.info(f"New directory created {directory}")
+
+        self.directory = directory
+
+
+    def __setup_logger(self):
+        # Создаем новый логгер
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+
+        # Создаем файловый обработчик
+        file_handler = logging.FileHandler('data_parser.log')
+        file_handler.setLevel(logging.INFO)
+
+        # Создаем форматтер
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+
+        # Добавляем обработчик к логгеру
+        logger.addHandler(file_handler)
+
+        return logger
 
     def __get_leagues(self):
         params = {
@@ -26,6 +56,7 @@ class DataParser:
         response = requests.get(url=url, params=params)
 
         if response.status_code == 200:
+            self.logger.debug("200 received from betsAPI")
             return response.json()
         else:
             self.logger.error("Failed to fetch leagues data. Status code: %s", response.status_code)
@@ -39,6 +70,7 @@ class DataParser:
         for league in leagues:
             if league["name"] == self.league_name:
                 self.league_id = int(league["id"])
+                self.logger.info(f"Get league: {self.league_name} id: {self.league_id}")
 
 
 
@@ -52,6 +84,7 @@ class DataParser:
         response = requests.get(url=url, params=params)
 
         if response.status_code == 200:
+            self.logger.debug("200 received from betsAPI")
             return response.json()
         else:
             self.logger.error("Failed to fetch league table data. Status code: %s", response.status_code)
@@ -68,6 +101,7 @@ class DataParser:
             teams_ids[name] = team_id
 
         self.teams = teams_ids
+        self.logger.info(f"Get teams {self.teams}")
 
 
 
@@ -84,6 +118,7 @@ class DataParser:
         response = requests.get(url=url, params=params)
 
         if response.status_code == 200:
+            self.logger.debug("200 received from betsAPI")
             return response.json()
         else:
             self.logger.error("Failed to fetch matches data. Status code: %s", response.status_code)
@@ -99,6 +134,7 @@ class DataParser:
         response = requests.get(url=url, params=params)
 
         if response.status_code == 200:
+            self.logger.debug("200 received from betsAPI")
             return response.json()
         else:
             self.logger.error("Failed to fetch odds data. Status code: %s", response.status_code)
@@ -107,6 +143,7 @@ class DataParser:
     def __write_odds_for_match(self, team_name, team_id):
         output_filename = f"{self.directory}//event_odds_{team_name}_{team_id}.json"
         with open(output_filename, "w") as file:
+            self.logger.debug(f"File opened {output_filename}")
             file.write("[")
             page = 1
             while True:
@@ -121,6 +158,7 @@ class DataParser:
                         self.logger.debug("New match added")
                 page += 1
             file.write("]")
+        self.logger.debug("File closed")
 
     def __extract_match_data(self, match):
         event_id = match["id"]
@@ -129,6 +167,7 @@ class DataParser:
         odds_data = self.__get_odds_for_match(event_id)
         odds = odds_data["results"]["odds"]
         if odds:
+            self.logger.debug(f"Match extracted {home_team_name}-{away_team_name}")
             return {
                 "home": {
                     "id": home_team_id,
@@ -141,6 +180,7 @@ class DataParser:
                 "odds": odds
             }
         else:
+            self.logger.debug(f"No odds for match {home_team_name}-{away_team_name}")
             return None
 
     def __write_match_data(self, file, match_data, is_first_match):
@@ -153,19 +193,10 @@ class DataParser:
             self.logger.debug("Get matches and odds for %s", team_name)
             self.__write_odds_for_match(team_name, team_id)
 
-    def __init_directory(self):
-        directory = f"data_{self.league_name}"
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        self.directory = directory
-
 
     def parse(self):
-        self.__find_league_id()
-        print(self.league_id)
+        self.logger.info(f"Parsing started league: {self.league_name}")
         self.__find_teams_ids()
-        print(self.teams)
         # name = next(iter(self.teams))
         # team_id = self.teams[name]
         # self.__write_odds_for_match(name, team_id)
