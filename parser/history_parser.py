@@ -12,10 +12,10 @@ class DataParser:
         self.token = token
         self.league_name = league_name
         self.cc = cc
-        self.__init_directory()
-        self.__find_league_id()
         self.logger = logging.getLogger(__name__)
         self.logger = self.__setup_logger()
+        self.__init_directory()
+        self.__find_league_id()
 
 
     def __init_directory(self):
@@ -28,20 +28,21 @@ class DataParser:
 
 
     def __setup_logger(self):
-        # Создаем новый логгер
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.DEBUG)
 
-        # Создаем файловый обработчик
         file_handler = logging.FileHandler('data_parser.log')
         file_handler.setLevel(logging.INFO)
 
-        # Создаем форматтер
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)
+
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
 
-        # Добавляем обработчик к логгеру
         logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
 
         return logger
 
